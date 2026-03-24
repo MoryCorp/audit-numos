@@ -4,7 +4,7 @@ services:
     ports:
       - "8000:8000"
     volumes:
-      - audit-data:/data
+      - /data/numos-audit:/data
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - DATABASE_URL=sqlite+aiosqlite:///data/numos-audit.db
@@ -19,6 +19,3 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
-
-volumes:
-  audit-data:
