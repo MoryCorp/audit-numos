@@ -1,0 +1,24 @@
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - audit-data:/data
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - DATABASE_URL=sqlite+aiosqlite:///data/numos-audit.db
+      - SCREENSHOTS_DIR=/data/screenshots
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://audit.numos.fr}
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  audit-data:
