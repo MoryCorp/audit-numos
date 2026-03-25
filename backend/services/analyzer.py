@@ -8,20 +8,20 @@ from database import DB_PATH
 logger = logging.getLogger(__name__)
 
 ISSUE_DEFS = [
-    {"key": "pages_500", "severity": "critical", "label": "pages ont une erreur serveur (500)"},
-    {"key": "pages_404", "severity": "critical", "label": "pages affichent une erreur (404)"},
-    {"key": "broken_internal_links", "severity": "critical", "label": "liens internes pointent vers des pages inexistantes"},
-    {"key": "missing_titles", "severity": "warning", "label": "pages n'ont pas de titre pour Google"},
-    {"key": "missing_h1", "severity": "warning", "label": "pages n'ont pas de titre principal (H1)"},
-    {"key": "duplicate_titles_count", "severity": "warning", "label": "groupes de pages partagent le meme titre"},
-    {"key": "long_titles", "severity": "warning", "label": "titres sont trop longs et seront tronques par Google"},
-    {"key": "missing_descriptions", "severity": "warning", "label": "pages n'ont pas de description pour Google"},
-    {"key": "multiple_h1", "severity": "warning", "label": "pages ont plusieurs titres principaux (H1)"},
-    {"key": "redirect_chains", "severity": "warning", "label": "pages passent par 2 redirections ou plus"},
-    {"key": "images_without_alt", "severity": "info", "label": "images sont invisibles pour Google (pas de texte alternatif)"},
-    {"key": "deep_pages", "severity": "info", "label": "pages sont a plus de 3 clics de profondeur"},
-    {"key": "noindex_pages", "severity": "info", "label": "pages demandent a Google de ne pas les referencer"},
-    {"key": "long_descriptions", "severity": "info", "label": "descriptions sont trop longues"},
+    {"key": "pages_500", "severity": "critical", "one": "page a une erreur serveur (500)", "many": "pages ont une erreur serveur (500)"},
+    {"key": "pages_404", "severity": "critical", "one": "page affiche une erreur (404)", "many": "pages affichent une erreur (404)"},
+    {"key": "broken_internal_links", "severity": "critical", "one": "lien interne pointe vers une page inexistante", "many": "liens internes pointent vers des pages inexistantes"},
+    {"key": "missing_titles", "severity": "warning", "one": "page n'a pas de titre pour Google", "many": "pages n'ont pas de titre pour Google"},
+    {"key": "missing_h1", "severity": "warning", "one": "page n'a pas de titre principal (H1)", "many": "pages n'ont pas de titre principal (H1)"},
+    {"key": "duplicate_titles_count", "severity": "warning", "one": "groupe de pages partage le meme titre", "many": "groupes de pages partagent le meme titre"},
+    {"key": "long_titles", "severity": "warning", "one": "titre est trop long et sera tronque par Google", "many": "titres sont trop longs et seront tronques par Google"},
+    {"key": "missing_descriptions", "severity": "warning", "one": "page n'a pas de description pour Google", "many": "pages n'ont pas de description pour Google"},
+    {"key": "multiple_h1", "severity": "warning", "one": "page a plusieurs titres principaux (H1)", "many": "pages ont plusieurs titres principaux (H1)"},
+    {"key": "redirect_chains", "severity": "warning", "one": "page passe par 2 redirections ou plus", "many": "pages passent par 2 redirections ou plus"},
+    {"key": "images_without_alt", "severity": "info", "one": "image est invisible pour Google (pas de texte alternatif)", "many": "images sont invisibles pour Google (pas de texte alternatif)"},
+    {"key": "deep_pages", "severity": "info", "one": "page est a plus de 3 clics de profondeur", "many": "pages sont a plus de 3 clics de profondeur"},
+    {"key": "noindex_pages", "severity": "info", "one": "page demande a Google de ne pas la referencer", "many": "pages demandent a Google de ne pas les referencer"},
+    {"key": "long_descriptions", "severity": "info", "one": "description est trop longue", "many": "descriptions sont trop longues"},
 ]
 
 
@@ -194,11 +194,12 @@ async def compute_crawl_summary(audit_id: str) -> dict:
     for defn in ISSUE_DEFS:
         count = stats.get(defn["key"], 0)
         if count > 0:
+            label = defn["one"] if count == 1 else defn["many"]
             issues.append({
                 "key": defn["key"],
                 "count": count,
                 "severity": defn["severity"],
-                "label": defn["label"],
+                "label": label,
             })
     issues.sort(key=lambda x: (severity_order[x["severity"]], -x["count"]))
     stats["issues"] = issues

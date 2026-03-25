@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { getReport, type AuditReport } from "../lib/api";
 import {
   formatDate,
-  formatSeconds,
   getScoreColor,
 } from "../lib/formatting";
 import ScoreGauge from "../components/ScoreGauge";
@@ -39,7 +38,6 @@ export default function Report() {
     };
 
     load();
-    // Polling if still running
     const interval = setInterval(async () => {
       try {
         const data = await getReport(id);
@@ -80,30 +78,29 @@ export default function Report() {
 
   const isRunning = report.status === "running" || report.status === "pending";
   const lm = report.lighthouse_mobile;
-  const ttfb = report.ttfb_data;
   const score = report.numos_score;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Back link */}
-        <Link to="/" className="text-sm text-gray-400 hover:text-gray-600 mb-6 inline-block">
+        <Link to="/" className="text-sm text-gray-400 hover:text-gray-600 mb-4 sm:mb-6 inline-block">
           &larr; Retour au dashboard
         </Link>
 
         {/* Header */}
-        <header className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
-          <div className="flex items-start gap-6">
+        <header className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-8 mb-4 sm:mb-6">
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             {report.screenshot_url && (
               <img
                 src={report.screenshot_url}
                 alt={`Capture de ${report.domain}`}
-                className="w-64 rounded-lg border border-gray-200 shadow-sm flex-shrink-0"
+                className="w-full sm:w-64 rounded-lg border border-gray-200 shadow-sm flex-shrink-0"
               />
             )}
             <div>
               <p className="text-sm text-gray-400 uppercase tracking-wide mb-1">Audit de performance & SEO</p>
-              <h1 className="text-3xl font-bold text-gray-900">{report.domain}</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">{report.domain}</h1>
               <p className="text-gray-500 mt-1">Audit realise le {formatDate(report.created_at)}</p>
               {isRunning && (
                 <div className="mt-3 flex items-center gap-2">
@@ -117,32 +114,32 @@ export default function Report() {
 
         {/* Score Numos */}
         {score && (
-          <section className="bg-white rounded-2xl border border-gray-200 p-8 mb-6 text-center">
+          <section className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-8 mb-4 sm:mb-6 text-center">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-400 mb-6">
               Score Numos
             </h2>
             <div className="relative inline-flex">
-              <ScoreGauge score={score.global} size={200} />
+              <ScoreGauge score={score.global} size={180} />
             </div>
-            <div className="flex justify-center gap-8 mt-8">
+            <div className="flex flex-wrap justify-center gap-4 sm:gap-8 mt-6 sm:mt-8">
               {score.pillars.performance != null && (
                 <div className="text-center">
-                  <ScoreGauge score={score.pillars.performance} size={80} label="Performance" />
+                  <ScoreGauge score={score.pillars.performance} size={70} label="Performance" />
                 </div>
               )}
               {score.pillars.crux != null && (
                 <div className="text-center">
-                  <ScoreGauge score={score.pillars.crux} size={80} label="CrUX" />
+                  <ScoreGauge score={score.pillars.crux} size={70} label="CrUX" />
                 </div>
               )}
               {score.pillars.ttfb != null && (
                 <div className="text-center">
-                  <ScoreGauge score={score.pillars.ttfb} size={80} label="TTFB" />
+                  <ScoreGauge score={score.pillars.ttfb} size={70} label="Serveur" />
                 </div>
               )}
               {score.pillars.seo != null && (
                 <div className="text-center">
-                  <ScoreGauge score={score.pillars.seo} size={80} label="SEO" />
+                  <ScoreGauge score={score.pillars.seo} size={70} label="SEO" />
                 </div>
               )}
             </div>
@@ -151,10 +148,10 @@ export default function Report() {
 
         {/* Performance */}
         {lm && (
-          <section className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
+          <section className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-8 mb-4 sm:mb-6">
             <h2 className="text-xl font-bold text-gray-900 mb-1">Performance</h2>
             {lm.performance_score != null && (
-              <p className="text-gray-500 mb-6">
+              <p className="text-gray-500 mb-4 sm:mb-6">
                 Google note votre site{" "}
                 <span
                   className="font-bold"
@@ -165,7 +162,7 @@ export default function Report() {
                 sur mobile
               </p>
             )}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <MetricCard metricKey="LCP" value={lm.lcp.value} />
               <MetricCard metricKey="CLS" value={lm.cls.value} />
               <MetricCard metricKey="TBT" value={lm.tbt.value} />
@@ -173,96 +170,54 @@ export default function Report() {
           </section>
         )}
 
-        {/* CrUX */}
-        <section className="mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">
-            Donnees terrain (28 derniers jours)
-          </h2>
-          <div className="space-y-4">
-            <CruxPanel data={report.crux_url} label="Cette page" />
-            {report.crux_origin && (
-              <CruxPanel data={report.crux_origin} label="Ensemble du domaine" />
-            )}
-          </div>
-        </section>
-
-        {/* TTFB */}
-        {ttfb && (
-          <section className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Vitesse du serveur</h2>
-            <p className="text-lg text-gray-700 mb-4">
-              Votre serveur repond en{" "}
-              <span
-                className="font-bold text-2xl"
-                style={{ color: getScoreColor(ttfb.ttfb_seconds <= 0.5 ? 90 : ttfb.ttfb_seconds <= 1.0 ? 60 : 20) }}
-              >
-                {formatSeconds(ttfb.ttfb_seconds)}
-              </span>
-            </p>
-
-            {/* Comparative bars */}
-            <div className="space-y-3 mb-4">
-              <div>
-                <div className="flex justify-between text-sm text-gray-500 mb-1">
-                  <span>Votre site</span>
-                  <span>{formatSeconds(ttfb.ttfb_seconds)}</span>
-                </div>
-                <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${Math.min((ttfb.ttfb_seconds / 3) * 100, 100)}%`,
-                      backgroundColor: getScoreColor(ttfb.ttfb_seconds <= 0.5 ? 90 : ttfb.ttfb_seconds <= 1.0 ? 60 : 20),
-                    }}
-                  />
-                </div>
-              </div>
-              <div>
-                <div className="flex justify-between text-sm text-gray-500 mb-1">
-                  <span>Site bien heberge</span>
-                  <span>0.3s</span>
-                </div>
-                <div className="h-4 bg-gray-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full rounded-full bg-green-500"
-                    style={{ width: `${(0.3 / 3) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {ttfb.ttfb_seconds > 0.5 && (
-              <p className="text-gray-600">
-                Votre serveur est{" "}
-                <span className="font-bold">{Math.round(ttfb.ttfb_seconds / 0.3)}x plus lent</span>{" "}
-                qu'un site WordPress sur un hebergement adapte.
-              </p>
-            )}
+        {/* CrUX - domaine uniquement */}
+        {report.crux_origin && (
+          <section className="mb-4 sm:mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-3 sm:mb-4">
+              Donnees terrain (28 derniers jours)
+            </h2>
+            <CruxPanel data={report.crux_origin} label="Ensemble du domaine" />
+          </section>
+        )}
+        {!report.crux_origin && report.crux_url && (
+          <section className="mb-4 sm:mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-3 sm:mb-4">
+              Donnees terrain (28 derniers jours)
+            </h2>
+            <CruxPanel data={report.crux_url} label="Donnees terrain" />
+          </section>
+        )}
+        {!report.crux_origin && !report.crux_url && (
+          <section className="mb-4 sm:mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-3 sm:mb-4">
+              Donnees terrain (28 derniers jours)
+            </h2>
+            <CruxPanel data={null} label="Donnees terrain" />
           </section>
         )}
 
         {/* Page Weight */}
         {report.page_weight && (
-          <section className="mb-6">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Poids de la page</h2>
+          <section className="mb-4 sm:mb-6">
+            <h2 className="text-xl font-bold text-gray-900 mb-3 sm:mb-4">Poids de la page</h2>
             <PageWeightBreakdown data={report.page_weight} />
           </section>
         )}
 
         {/* SEO */}
         {report.crawl_status === "running" && (
-          <section className="mb-6">
+          <section className="mb-4 sm:mb-6">
             <CrawlProgress progress={report.crawl_progress} />
           </section>
         )}
         {report.crawl_summary && (
-          <section className="mb-6">
+          <section className="mb-4 sm:mb-6">
             <SeoSummary data={report.crawl_summary} />
           </section>
         )}
 
         {/* Footer */}
-        <footer className="text-center py-8 border-t border-gray-200 mt-8">
+        <footer className="text-center py-6 sm:py-8 border-t border-gray-200 mt-6 sm:mt-8">
           <p className="text-gray-500">
             Audit realise par{" "}
             <a href="https://numos.fr" target="_blank" rel="noopener noreferrer" className="text-blue-600 font-medium hover:underline">
