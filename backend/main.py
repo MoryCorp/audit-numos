@@ -22,11 +22,12 @@ logger = logging.getLogger(__name__)
 
 crawl_semaphore = asyncio.Semaphore(settings.max_concurrent_crawls)
 
+os.makedirs(settings.screenshots_dir, exist_ok=True)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
-    os.makedirs(settings.screenshots_dir, exist_ok=True)
     yield
 
 
