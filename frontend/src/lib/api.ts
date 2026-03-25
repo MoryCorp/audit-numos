@@ -1,11 +1,32 @@
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+export function getAdminToken(): string | null {
+  return localStorage.getItem("admin_token");
+}
+
+export function setAdminToken(token: string) {
+  localStorage.setItem("admin_token", token);
+}
+
+export function clearAdminToken() {
+  localStorage.removeItem("admin_token");
+}
+
+async function request<T>(path: string, options?: RequestInit & { auth?: boolean }): Promise<T> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (options?.auth) {
+    const token = getAdminToken();
+    if (token) headers["Authorization"] = `Bearer ${token}`;
+  }
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...options,
+    headers: { ...headers, ...options?.headers },
   });
   if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      clearAdminToken();
+      throw new Error("__AUTH_REQUIRED__");
+    }
     const error = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(error.detail || res.statusText);
   }
@@ -117,16 +138,12 @@ export interface AuditReport {
 export function createAudit(url: string) {
   return request<{ id: string; url: string; domain: string; status: string }>(
     "/api/audits",
-    { method: "POST", body: JSON.stringify({ url }) },
+    { method: "POST", body: JSON.stringify({ url }), auth: true },
   );
 }
 
 export function getAudits() {
-  return request<AuditListItem[]>("/api/audits");
-}
-
-export function getAuditProgress(id: string) {
-  return request<{ id: string; status: string }>(`/api/audits/${id}/progress`);
+  return request<AuditListItem[]>("/api/audits", { auth: true });
 }
 
 export function getReport(id: string) {
@@ -134,5 +151,5 @@ export function getReport(id: string) {
 }
 
 export function deleteAudit(id: string) {
-  return request<{ ok: boolean }>(`/api/audits/${id}`, { method: "DELETE" });
+  return request<{ ok: boolean }>(`/api/audits/${id}`, { method: "DELETE", auth: true });
 }

@@ -1,9 +1,61 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { createAudit, deleteAudit, getAudits, type AuditListItem } from "../lib/api";
+import {
+  createAudit,
+  deleteAudit,
+  getAdminToken,
+  getAudits,
+  setAdminToken,
+  type AuditListItem,
+} from "../lib/api";
 import { formatDate, getScoreColor } from "../lib/formatting";
 
+function LoginForm({ onLogin }: { onLogin: () => void }) {
+  const [token, setToken] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!token.trim()) return;
+    setAdminToken(token.trim());
+    try {
+      await getAudits();
+      onLogin();
+    } catch {
+      setAdminToken("");
+      setError("Token invalide");
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="bg-white rounded-2xl border border-gray-200 p-8 w-full max-w-sm">
+        <h1 className="text-xl font-bold text-gray-900 mb-1">Numos Audit</h1>
+        <p className="text-gray-500 text-sm mb-6">Entrez le mot de passe pour acceder au dashboard.</p>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            placeholder="Mot de passe"
+            className="w-full rounded-lg border border-gray-300 px-4 py-3 mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            autoFocus
+          />
+          {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+          <button
+            type="submit"
+            className="w-full rounded-lg bg-blue-600 px-4 py-3 font-medium text-white hover:bg-blue-700 transition-colors"
+          >
+            Connexion
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
+  const [authenticated, setAuthenticated] = useState(!!getAdminToken());
   const [audits, setAudits] = useState<AuditListItem[]>([]);
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
@@ -12,16 +64,23 @@ export default function Dashboard() {
   const fetchAudits = async () => {
     try {
       setAudits(await getAudits());
-    } catch {
-      /* ignore */
+    } catch (err) {
+      if (err instanceof Error && err.message === "__AUTH_REQUIRED__") {
+        setAuthenticated(false);
+      }
     }
   };
 
   useEffect(() => {
+    if (!authenticated) return;
     fetchAudits();
     const interval = setInterval(fetchAudits, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [authenticated]);
+
+  if (!authenticated) {
+    return <LoginForm onLogin={() => setAuthenticated(true)} />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,6 +96,10 @@ export default function Dashboard() {
       setUrl("");
       await fetchAudits();
     } catch (err) {
+      if (err instanceof Error && err.message === "__AUTH_REQUIRED__") {
+        setAuthenticated(false);
+        return;
+      }
       setError(err instanceof Error ? err.message : "Erreur lors de la creation de l'audit");
     } finally {
       setLoading(false);

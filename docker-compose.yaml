@@ -10,4 +10,5 @@ services:
       - DATABASE_URL=sqlite+aiosqlite:///data/numos-audit.db
       - SCREENSHOTS_DIR=/data/screenshots
       - CORS_ORIGINS=${CORS_ORIGINS:-https://audit.numos.fr}
+      - ADMIN_TOKEN=${ADMIN_TOKEN}
     restart: unless-stopped

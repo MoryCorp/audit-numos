@@ -4,7 +4,8 @@ import os
 from contextlib import asynccontextmanager
 from urllib.parse import urlparse
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -45,6 +46,13 @@ app.add_middleware(
 )
 
 app.mount("/screenshots", StaticFiles(directory=settings.screenshots_dir), name="screenshots")
+
+bearer_scheme = HTTPBearer()
+
+
+async def require_admin(credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme)):
+    if not settings.admin_token or credentials.credentials != settings.admin_token:
+        raise HTTPException(status_code=401, detail="Token invalide")
 
 
 async def run_audit_background(audit_id: str, url: str):
@@ -139,7 +147,7 @@ async def safe_run(func, *args):
         return None
 
 
-@app.post("/api/audits", status_code=201)
+@app.post("/api/audits", status_code=201, dependencies=[Depends(require_admin)])
 async def create_audit_endpoint(body: AuditCreate, background_tasks: BackgroundTasks):
     url = str(body.url).rstrip("/")
     domain = urlparse(url).netloc
@@ -148,12 +156,12 @@ async def create_audit_endpoint(body: AuditCreate, background_tasks: BackgroundT
     return audit
 
 
-@app.get("/api/audits")
+@app.get("/api/audits", dependencies=[Depends(require_admin)])
 async def list_audits_endpoint():
     return await list_audits()
 
 
-@app.get("/api/audits/{audit_id}")
+@app.get("/api/audits/{audit_id}", dependencies=[Depends(require_admin)])
 async def get_audit_endpoint(audit_id: str):
     audit = await get_audit(audit_id)
     if not audit:
@@ -215,7 +223,7 @@ async def get_audit_report(audit_id: str):
     }
 
 
-@app.post("/api/audits/{audit_id}/crawl/stop")
+@app.post("/api/audits/{audit_id}/crawl/stop", dependencies=[Depends(require_admin)])
 async def stop_crawl(audit_id: str):
     crawler = active_crawlers.get(audit_id)
     if crawler:
@@ -224,7 +232,7 @@ async def stop_crawl(audit_id: str):
     raise HTTPException(status_code=404, detail="Aucun crawl actif pour cet audit")
 
 
-@app.delete("/api/audits/{audit_id}")
+@app.delete("/api/audits/{audit_id}", dependencies=[Depends(require_admin)])
 async def delete_audit_endpoint(audit_id: str):
     audit = await get_audit(audit_id)
     if not audit:

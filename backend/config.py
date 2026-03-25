@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     max_concurrent_crawls: int = 5
     default_crawl_limit: int = 5000
     cors_origins: str = "https://audit.numos.fr"
+    admin_token: str = ""
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
