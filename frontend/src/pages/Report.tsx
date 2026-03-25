@@ -5,7 +5,6 @@ import {
   formatDate,
   formatSeconds,
   getScoreColor,
-  getVerdictLabel,
 } from "../lib/formatting";
 import ScoreGauge from "../components/ScoreGauge";
 import MetricCard from "../components/MetricCard";
