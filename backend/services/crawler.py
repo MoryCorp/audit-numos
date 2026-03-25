@@ -69,20 +69,12 @@ class SEOCrawler:
         while True:
             url, depth, source = await self.queue.get()
             try:
-                if self._stopped or self.crawled >= self.config["max_urls"]:
-                    self.queue.task_done()
-                    continue
-
-                await self._process_url(session, url, depth, source)
-
-                if len(self.results) >= self.config["commit_batch_size"]:
-                    await self._flush()
-                    await self._update_progress()
-
-                await asyncio.sleep(self.config["delay_between_requests"])
-            except asyncio.CancelledError:
-                self.queue.task_done()
-                raise
+                if not self._stopped and self.crawled < self.config["max_urls"]:
+                    await self._process_url(session, url, depth, source)
+                    if len(self.results) >= self.config["commit_batch_size"]:
+                        await self._flush()
+                        await self._update_progress()
+                    await asyncio.sleep(self.config["delay_between_requests"])
             except Exception as e:
                 logger.debug(f"Worker error on {url}: {e}")
                 self.errors += 1
