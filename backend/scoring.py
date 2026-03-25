@@ -51,7 +51,7 @@ def calculate_numos_score(
             crawl_stats.get("pages_404", 0) * 3
             + crawl_stats.get("pages_500", 0) * 5
             + crawl_stats.get("missing_titles", 0) * 2
-            + crawl_stats.get("duplicate_titles", 0) * 1
+            + crawl_stats.get("duplicate_titles_count", 0) * 1
             + crawl_stats.get("missing_descriptions", 0) * 1
             + crawl_stats.get("missing_h1", 0) * 2
             + crawl_stats.get("multiple_h1", 0) * 0.5
