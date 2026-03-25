@@ -158,6 +158,46 @@ async def update_audit(audit_id: str, **kwargs):
 
 async def delete_audit(audit_id: str) -> bool:
     async with aiosqlite.connect(DB_PATH) as db:
+        await db.execute("DELETE FROM crawl_results WHERE audit_id = ?", (audit_id,))
         cursor = await db.execute("DELETE FROM audits WHERE id = ?", (audit_id,))
         await db.commit()
         return cursor.rowcount > 0
+
+
+async def bulk_insert_crawl_results(audit_id: str, results: list[dict]):
+    if not results:
+        return
+    async with aiosqlite.connect(DB_PATH) as db:
+        for r in results:
+            await db.execute(
+                """INSERT INTO crawl_results (
+                    audit_id, url, final_url, status_code, redirect_chain,
+                    depth, source, content_type, error,
+                    title, title_length, description, description_length,
+                    h1s, h1_count, canonical, is_noindex,
+                    images_total, images_without_alt, internal_links_count
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    audit_id,
+                    r.get("url"),
+                    r.get("final_url"),
+                    r.get("status_code", 0),
+                    json.dumps(r.get("redirect_chain", [])),
+                    r.get("depth", 0),
+                    r.get("source"),
+                    r.get("content_type"),
+                    r.get("error"),
+                    r.get("title"),
+                    r.get("title_length", 0),
+                    r.get("description"),
+                    r.get("description_length", 0),
+                    json.dumps(r.get("h1s", [])),
+                    r.get("h1_count", 0),
+                    r.get("canonical"),
+                    1 if r.get("is_noindex") else 0,
+                    r.get("images_total", 0),
+                    r.get("images_without_alt", 0),
+                    r.get("internal_links_count", 0),
+                ),
+            )
+        await db.commit()

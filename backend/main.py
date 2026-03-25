@@ -9,10 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from config import settings
+from config import CRAWLER_DEFAULTS, settings
 from database import create_audit, delete_audit, get_audit, init_db, list_audits, update_audit
-from models import AuditCreate, AuditListItem, AuditProgress, AuditResponse
+from models import AuditCreate
 from scoring import calculate_numos_score
+from services.analyzer import compute_crawl_summary
+from services.crawler import SEOCrawler
 from services.pagespeed import extract_crux, extract_lighthouse_metrics, run_pagespeed
 from services.screenshot import capture_homepage
 from services.ttfb import measure_ttfb
@@ -21,6 +23,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 crawl_semaphore = asyncio.Semaphore(settings.max_concurrent_crawls)
+active_crawlers: dict[str, SEOCrawler] = {}
 
 os.makedirs(settings.screenshots_dir, exist_ok=True)
 
@@ -50,12 +53,12 @@ async def run_audit_background(audit_id: str, url: str):
 
         screenshot_path = os.path.join(settings.screenshots_dir, f"{audit_id}.png")
 
+        # Phase 1 : jobs rapides en parallele
         psi_mobile, psi_desktop, ttfb_data, screenshot_data = await asyncio.gather(
             safe_run(run_pagespeed, url, "mobile"),
             safe_run(run_pagespeed, url, "desktop"),
             safe_run(measure_ttfb, url),
             safe_run(capture_homepage, url, screenshot_path),
-            return_exceptions=False,
         )
 
         crux_url = None
@@ -65,6 +68,7 @@ async def run_audit_background(audit_id: str, url: str):
             crux_url = crux.get("url")
             crux_origin = crux.get("origin")
 
+        # Score partiel (sans SEO)
         score = calculate_numos_score(
             pagespeed_mobile=psi_mobile,
             pagespeed_desktop=psi_desktop,
@@ -76,7 +80,7 @@ async def run_audit_background(audit_id: str, url: str):
 
         await update_audit(
             audit_id,
-            status="done",
+            status="partial",
             pagespeed_mobile=psi_mobile,
             pagespeed_desktop=psi_desktop,
             crux_url=crux_url,
@@ -86,7 +90,41 @@ async def run_audit_background(audit_id: str, url: str):
             page_weight_data=screenshot_data,
             numos_score=score,
         )
-        logger.info(f"Audit {audit_id} termine avec score {score['global']}/100")
+        logger.info(f"Audit {audit_id} phase 1 OK (score partiel {score['global']}/100), lancement crawl SEO")
+
+        # Phase 2 : crawl SEO
+        try:
+            async with crawl_semaphore:
+                await update_audit(audit_id, crawl_status="running")
+                crawler = SEOCrawler(audit_id, url, CRAWLER_DEFAULTS)
+                active_crawlers[audit_id] = crawler
+                try:
+                    await crawler.run()
+                finally:
+                    active_crawlers.pop(audit_id, None)
+
+            # Agreger et recalculer le score
+            summary = await compute_crawl_summary(audit_id)
+            final_score = calculate_numos_score(
+                pagespeed_mobile=psi_mobile,
+                pagespeed_desktop=psi_desktop,
+                crux_data=crux_url,
+                ttfb=ttfb_data,
+                crawl_stats=summary,
+            )
+
+            await update_audit(
+                audit_id,
+                status="done",
+                crawl_status="done",
+                crawl_summary=summary,
+                numos_score=final_score,
+            )
+            logger.info(f"Audit {audit_id} termine (score final {final_score['global']}/100, {summary['total_crawled']} pages)")
+
+        except Exception as e:
+            logger.error(f"Crawl {audit_id} echoue: {e}")
+            await update_audit(audit_id, status="done", crawl_status="failed")
 
     except Exception as e:
         logger.error(f"Audit {audit_id} echoue: {e}")
@@ -171,8 +209,19 @@ async def get_audit_report(audit_id: str):
         "crux_origin": audit.get("crux_origin"),
         "ttfb_data": audit.get("ttfb_data"),
         "page_weight": page_weight,
+        "crawl_status": audit.get("crawl_status"),
+        "crawl_progress": audit.get("crawl_progress"),
         "crawl_summary": audit.get("crawl_summary"),
     }
+
+
+@app.post("/api/audits/{audit_id}/crawl/stop")
+async def stop_crawl(audit_id: str):
+    crawler = active_crawlers.get(audit_id)
+    if crawler:
+        crawler.stop()
+        return {"ok": True, "message": "Arret demande"}
+    raise HTTPException(status_code=404, detail="Aucun crawl actif pour cet audit")
 
 
 @app.delete("/api/audits/{audit_id}")
@@ -180,6 +229,9 @@ async def delete_audit_endpoint(audit_id: str):
     audit = await get_audit(audit_id)
     if not audit:
         raise HTTPException(status_code=404, detail="Audit non trouve")
+    crawler = active_crawlers.get(audit_id)
+    if crawler:
+        crawler.stop()
     if audit.get("screenshot_path"):
         path = os.path.join(settings.screenshots_dir, audit["screenshot_path"])
         if os.path.exists(path):

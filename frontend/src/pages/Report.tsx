@@ -10,6 +10,8 @@ import ScoreGauge from "../components/ScoreGauge";
 import MetricCard from "../components/MetricCard";
 import CruxPanel from "../components/CruxPanel";
 import PageWeightBreakdown from "../components/PageWeightBreakdown";
+import CrawlProgress from "../components/CrawlProgress";
+import SeoSummary from "../components/SeoSummary";
 
 export default function Report() {
   const { id } = useParams<{ id: string }>();
@@ -247,11 +249,17 @@ export default function Report() {
           </section>
         )}
 
-        {/* SEO placeholder */}
-        <section className="bg-white rounded-2xl border border-gray-200 p-8 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Sante SEO</h2>
-          <p className="text-gray-400">Analyse SEO detaillee — bientot disponible.</p>
-        </section>
+        {/* SEO */}
+        {report.crawl_status === "running" && (
+          <section className="mb-6">
+            <CrawlProgress progress={report.crawl_progress} />
+          </section>
+        )}
+        {report.crawl_summary && (
+          <section className="mb-6">
+            <SeoSummary data={report.crawl_summary} />
+          </section>
+        )}
 
         {/* Footer */}
         <footer className="text-center py-8 border-t border-gray-200 mt-8">

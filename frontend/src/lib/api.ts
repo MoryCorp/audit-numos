@@ -68,6 +68,33 @@ export interface PageWeightData {
   };
 }
 
+export interface CrawlIssue {
+  key: string;
+  count: number;
+  severity: "critical" | "warning" | "info";
+  label: string;
+}
+
+export interface CrawlSummary {
+  total_crawled: number;
+  total_errors: number;
+  pages_ok: number;
+  pages_404: number;
+  pages_500: number;
+  pages_301: number;
+  missing_titles: number;
+  missing_descriptions: number;
+  missing_h1: number;
+  multiple_h1: number;
+  images_without_alt: number;
+  deep_pages: number;
+  noindex_pages: number;
+  broken_internal_links: number;
+  sitemap_urls: number;
+  sitemap_errors: number;
+  issues: CrawlIssue[];
+}
+
 export interface AuditReport {
   id: string;
   url: string;
@@ -82,7 +109,9 @@ export interface AuditReport {
   crux_origin: CruxData | null;
   ttfb_data: TtfbData | null;
   page_weight: PageWeightData | null;
-  crawl_summary: Record<string, unknown> | null;
+  crawl_status: string | null;
+  crawl_progress: { crawled: number; queued: number; errors: number } | null;
+  crawl_summary: CrawlSummary | null;
 }
 
 export function createAudit(url: string) {

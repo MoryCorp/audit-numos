@@ -56,12 +56,14 @@ export default function Dashboard() {
     const styles: Record<string, string> = {
       pending: "bg-gray-100 text-gray-700",
       running: "bg-blue-100 text-blue-700",
+      partial: "bg-blue-100 text-blue-700",
       done: "bg-green-100 text-green-700",
       failed: "bg-red-100 text-red-700",
     };
     const labels: Record<string, string> = {
       pending: "En attente",
       running: "En cours...",
+      partial: "Analyse SEO...",
       done: "Termine",
       failed: "Echoue",
     };
@@ -137,7 +139,7 @@ export default function Dashboard() {
                 </div>
                 <div className="flex items-center gap-4 flex-shrink-0">
                   {getStatusBadge(audit.status)}
-                  {audit.status === "done" && (
+                  {(audit.status === "done" || audit.status === "partial") && (
                     <Link
                       to={`/rapport/${audit.id}`}
                       className="text-blue-600 hover:text-blue-800 text-sm font-medium"

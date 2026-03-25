@@ -27,3 +27,13 @@ PAGE_WEIGHT_BENCHMARKS = {
     "total_mb": 2.0,
     "requests": 50,
 }
+
+CRAWLER_DEFAULTS = {
+    "max_urls": 500,
+    "max_concurrent_requests": 10,
+    "request_timeout": 10,
+    "delay_between_requests": 0.1,
+    "max_depth": 5,
+    "commit_batch_size": 50,
+    "user_agent": "NumosAuditBot/1.0 (+https://numos.fr)",
+}
