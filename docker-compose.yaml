@@ -1,8 +1,6 @@
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend
+  app:
+    build: .
     ports:
       - "8000:8000"
     volumes:
@@ -12,14 +10,4 @@ services:
       - DATABASE_URL=sqlite+aiosqlite:///data/numos-audit.db
       - SCREENSHOTS_DIR=/data/screenshots
       - CORS_ORIGINS=${CORS_ORIGINS:-https://audit.numos.fr}
-    restart: unless-stopped
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile.frontend
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
     restart: unless-stopped
