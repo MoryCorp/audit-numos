@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     default_crawl_limit: int = 5000
     cors_origins: str = "https://audit.numos.fr"
     admin_token: str = ""
+    audit_webhook_url: str = ""
+    public_base_url: str = "https://audit.numos.fr"
 
     model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 

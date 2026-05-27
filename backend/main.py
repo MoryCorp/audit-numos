@@ -19,6 +19,7 @@ from services.crawler import SEOCrawler
 from services.pagespeed import extract_crux, extract_lighthouse_metrics, run_pagespeed
 from services.screenshot import capture_homepage
 from services.ttfb import measure_ttfb
+from services.webhook import post_audit_event
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -99,6 +100,20 @@ async def run_audit_background(audit_id: str, url: str):
             numos_score=score,
         )
         logger.info(f"Audit {audit_id} phase 1 OK (score partiel {score['global']}/100), lancement crawl SEO")
+
+        if settings.audit_webhook_url:
+            asyncio.create_task(post_audit_event(
+                settings.audit_webhook_url,
+                {
+                    "event": "phase_1_complete",
+                    "audit_id": audit_id,
+                    "url": url,
+                    "domain": urlparse(url).netloc,
+                    "status": "partial",
+                    "report_url": f"{settings.public_base_url.rstrip('/')}/rapport/{audit_id}",
+                    "numos_score": score,
+                },
+            ))
 
         # Phase 2 : crawl SEO
         try:
