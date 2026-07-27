@@ -109,3 +109,16 @@ def test_entrees_vides():
     result = detect_technologies([], None, "https://exemple.fr")
     assert result["summary"]["tracking_stack_size"] == 0
     assert result["summary"]["has_server_side_tagging"] is False
+
+
+def test_plateformes_multi_locataires():
+    # Deux sites sur la meme plateforme ne sont pas le meme domaine.
+    assert registrable_domain("debouchage69330.vercel.app") == "debouchage69330.vercel.app"
+    assert registrable_domain("a.vercel.app") != registrable_domain("b.vercel.app")
+    # Un asset servi par la plateforme n'est pas first-party pour autant.
+    result = detect_technologies(
+        net("https://autre-locataire.vercel.app/gtm.js?id=GTM-AAAA111"),
+        "",
+        "https://monsite.vercel.app",
+    )
+    assert result["summary"]["has_server_side_tagging"] is False

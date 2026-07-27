@@ -29,6 +29,12 @@ from urllib.parse import urlparse
 MULTI_LABEL_SUFFIXES = {
     "co.uk", "org.uk", "gov.uk", "ac.uk", "com.au", "net.au", "org.au",
     "co.jp", "com.br", "co.nz", "com.tr", "co.za", "com.es",
+    # Plateformes multi-locataires : chaque sous-domaine est un site distinct,
+    # sinon tout autre locataire de la plateforme compterait comme first-party.
+    "vercel.app", "netlify.app", "github.io", "pages.dev", "web.app",
+    "firebaseapp.com", "herokuapp.com", "wixsite.com", "webflow.io",
+    "myshopify.com", "wordpress.com", "blogspot.com", "squarespace.com",
+    "weebly.com", "jimdofree.com", "jimdosite.com", "e-monsite.com",
 }
 
 GOOGLE_TAG_HOSTS = (
