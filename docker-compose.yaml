@@ -11,4 +11,14 @@ services:
       - SCREENSHOTS_DIR=/data/screenshots
       - CORS_ORIGINS=${CORS_ORIGINS:-https://audit.numos.fr}
       - ADMIN_TOKEN=${ADMIN_TOKEN}
+      # Sert a construire les liens de rapport envoyes aux prospects.
+      - PUBLIC_BASE_URL=${PUBLIC_BASE_URL:-https://audit.numos.fr}
+      # Webhook n8n de l'ancien flux Sheets. Un audit lance avec notify=false
+      # n'emet rien, seul le flux Apps Script en depend encore.
+      - AUDIT_WEBHOOK_URL=${AUDIT_WEBHOOK_URL:-}
+      # Chaque audit en phase 1 ouvre un Chromium : monter avec prudence.
+      - MAX_CONCURRENT_AUDITS=${MAX_CONCURRENT_AUDITS:-3}
+      - MAX_CONCURRENT_CRAWLS=${MAX_CONCURRENT_CRAWLS:-5}
+      # Pages crawlees par audit en mode qualification (POST /api/audits/bulk).
+      - LIGHT_CRAWL_LIMIT=${LIGHT_CRAWL_LIMIT:-50}
     restart: unless-stopped
