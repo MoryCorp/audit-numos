@@ -29,6 +29,7 @@ async def init_db():
                 ttfb_data TEXT,
                 screenshot_path TEXT,
                 page_weight_data TEXT,
+                tech_fingerprint TEXT,
 
                 crawl_status TEXT DEFAULT 'pending',
                 crawl_started_at TEXT,
@@ -73,6 +74,24 @@ async def init_db():
             CREATE INDEX IF NOT EXISTS idx_crawl_results_status
                 ON crawl_results(audit_id, status_code);
         """)
+        await _migrate(db)
+
+
+async def _migrate(db):
+    """CREATE TABLE IF NOT EXISTS laisse les bases existantes intactes : les
+    colonnes ajoutees apres coup doivent passer par un ALTER TABLE."""
+    added_columns = {
+        "audits": {
+            "tech_fingerprint": "TEXT",
+        },
+    }
+    for table, columns in added_columns.items():
+        cursor = await db.execute(f"PRAGMA table_info({table})")
+        existing = {row[1] for row in await cursor.fetchall()}
+        for name, coltype in columns.items():
+            if name not in existing:
+                await db.execute(f"ALTER TABLE {table} ADD COLUMN {name} {coltype}")
+    await db.commit()
 
 
 def _parse_json_field(value):
@@ -97,7 +116,7 @@ def _row_to_dict(row, columns):
     json_fields = [
         "pagespeed_mobile", "pagespeed_desktop", "crux_url", "crux_origin",
         "ttfb_data", "page_weight_data", "crawl_config", "crawl_progress",
-        "sitemap_data", "crawl_summary", "numos_score",
+        "sitemap_data", "crawl_summary", "numos_score", "tech_fingerprint",
     ]
     for field in json_fields:
         if field in d:
@@ -131,7 +150,9 @@ async def get_audit(audit_id: str) -> dict | None:
 async def list_audits() -> list[dict]:
     async with aiosqlite.connect(DB_PATH) as db:
         cursor = await db.execute(
-            "SELECT id, url, domain, status, created_at, numos_score FROM audits ORDER BY created_at DESC"
+            """SELECT id, url, domain, status, crawl_status, created_at,
+                      numos_score, tech_fingerprint
+               FROM audits ORDER BY created_at DESC"""
         )
         rows = await cursor.fetchall()
         columns = [desc[0] for desc in cursor.description]
@@ -139,6 +160,10 @@ async def list_audits() -> list[dict]:
         for row in rows:
             d = dict(zip(columns, row))
             d["numos_score"] = _parse_json_field(d.get("numos_score"))
+            # Seul le resume sert au tri des prospects, le detail alourdirait
+            # la liste sans rien apporter.
+            fingerprint = _parse_json_field(d.pop("tech_fingerprint", None))
+            d["tech_summary"] = fingerprint.get("summary") if isinstance(fingerprint, dict) else None
             result.append(d)
         return result
 

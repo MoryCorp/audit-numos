@@ -8,6 +8,12 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     max_concurrent_crawls: int = 5
+    # La phase 1 lance un Chromium par audit : sans plafond, un envoi en masse
+    # depuis le bulk fait exploser la RAM du conteneur.
+    max_concurrent_audits: int = 3
+    # Crawl reduit pour la qualification en masse, le crawl complet est reserve
+    # aux prospects qui passent le filtre.
+    light_crawl_limit: int = 50
     default_crawl_limit: int = 5000
     cors_origins: str = "https://audit.numos.fr"
     admin_token: str = ""

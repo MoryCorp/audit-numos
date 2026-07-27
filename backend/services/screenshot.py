@@ -4,10 +4,13 @@ from urllib.parse import urlparse
 
 from playwright.async_api import async_playwright
 
+from services.fingerprint import detect_technologies, registrable_domain
+
 
 async def capture_homepage(url: str, output_path: str) -> dict:
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
     requests_log = []
+    html = ""
 
     async with async_playwright() as p:
         browser = await p.chromium.launch()
@@ -40,6 +43,14 @@ async def capture_homepage(url: str, output_path: str) -> dict:
             await page.goto(url, wait_until="load", timeout=30000)
 
         await page.screenshot(path=output_path, full_page=False)
+
+        # Le DOM rendu porte les tags neutralises par une CMP : ils sont presents
+        # en type="text/plain" ou dans la config de la CMP sans jamais se charger.
+        try:
+            html = await page.content()
+        except Exception:
+            html = ""
+
         await browser.close()
 
     by_type = aggregate_by_type(requests_log)
@@ -57,6 +68,7 @@ async def capture_homepage(url: str, output_path: str) -> dict:
         "third_party_count": len(third_party),
         "third_party_size_bytes": sum(r["size"] for r in third_party),
         "unoptimized_images": unoptimized_images,
+        "tech_fingerprint": detect_technologies(requests_log, html, url),
     }
 
 
@@ -77,8 +89,11 @@ def aggregate_by_type(requests_log: list[dict]) -> dict:
 
 
 def is_same_domain(request_url: str, base_domain: str) -> bool:
+    # Comparaison sur le domaine enregistrable : un simple endswith comptait
+    # cdn.exemple.fr comme tiers face a www.exemple.fr, et laissait passer
+    # faux-exemple.fr comme first-party.
     try:
-        return urlparse(request_url).netloc.endswith(base_domain)
+        return registrable_domain(urlparse(request_url).netloc) == registrable_domain(base_domain)
     except Exception:
         return False
 
